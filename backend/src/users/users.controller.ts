@@ -38,6 +38,13 @@ export class UsersController {
     return this.usersService.findProfessores();
   }
 
+  @Get('alunos')
+  @ApiOperation({ summary: 'Listar apenas alunos' })
+  @ApiResponse({ status: 200, description: 'Lista de alunos' })
+  findAlunos() {
+    return this.usersService.findAlunos();
+  }
+
   @Get('me')
   @ApiOperation({ summary: 'Obter perfil do usuário logado' })
   @ApiResponse({ status: 200, description: 'Dados do usuário' })

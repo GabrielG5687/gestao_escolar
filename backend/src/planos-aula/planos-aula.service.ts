@@ -233,4 +233,25 @@ export class PlanosAulaService {
       },
     });
   }
+
+  async updateStatus(id: string, status: 'RASCUNHO' | 'PUBLICADO', userId: string, userRole: Role) {
+    const plano = await this.planoAulaRepository.findOne({ where: { id } });
+
+    if (!plano) {
+      throw new NotFoundException('Plano de aula não encontrado');
+    }
+
+    // Apenas o autor ou admin/supervisor podem alterar o status
+    if (plano.autorId !== userId && userRole !== Role.ADMIN && userRole !== Role.SUPERVISOR) {
+      throw new ForbiddenException('Você não tem permissão para alterar o status deste plano');
+    }
+
+    await this.planoAulaRepository.update(id, { status: status as any });
+
+    return {
+      id,
+      status,
+      message: 'Status atualizado com sucesso',
+    };
+  }
 }

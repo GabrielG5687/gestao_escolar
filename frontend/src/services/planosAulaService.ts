@@ -28,6 +28,15 @@ export interface PlanoAula extends PlanoAulaData {
     nome: string;
     serie: string;
   };
+  comentarios?: Array<{
+    id: string;
+    texto: string;
+    createdAt: string;
+    autor: {
+      id: string;
+      nome: string;
+    };
+  }>;
 }
 
 export const planosAulaService = {
@@ -73,6 +82,12 @@ export const planosAulaService = {
   // Listar comentários
   getComentarios: async (planoId: string) => {
     const response = await api.get(`/planos-aula/${planoId}/comentarios`);
+    return response.data;
+  },
+
+  // Atualizar status do plano
+  updateStatus: async (planoId: string, status: 'RASCUNHO' | 'PUBLICADO') => {
+    const response = await api.patch(`/planos-aula/${planoId}/status`, { status });
     return response.data;
   },
 };

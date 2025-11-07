@@ -79,4 +79,30 @@ export class PlanosAulaController {
   getComentarios(@Param('id') id: string) {
     return this.planosAulaService.getComentarios(id);
   }
+
+  @Patch(':id/status')
+  @ApiOperation({ 
+    summary: 'Atualizar status do plano de aula',
+    description: 'Altera o status entre RASCUNHO e PUBLICADO'
+  })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Status atualizado com sucesso',
+    schema: {
+      example: {
+        id: 'uuid',
+        status: 'PUBLICADO',
+        message: 'Status atualizado com sucesso'
+      }
+    }
+  })
+  @ApiResponse({ status: 403, description: 'Sem permissão para alterar status' })
+  @ApiResponse({ status: 404, description: 'Plano não encontrado' })
+  updateStatus(
+    @Param('id') id: string,
+    @Body('status') status: 'RASCUNHO' | 'PUBLICADO',
+    @Request() req,
+  ) {
+    return this.planosAulaService.updateStatus(id, status, req.user.userId, req.user.role);
+  }
 }

@@ -1,8 +1,9 @@
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { planosAulaService } from '@/services/planosAulaService';
 import { turmasService } from '@/services/turmasService';
@@ -25,6 +26,9 @@ type PlanoForm = z.infer<typeof planoSchema>;
 
 export default function CriarPlanoPage() {
   const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
+  const queryClient = useQueryClient();
+  const isEditing = !!id;
   
   // Buscar turmas disponíveis
   const { data: turmas = [], isLoading: loadingTurmas } = useQuery({
@@ -32,10 +36,18 @@ export default function CriarPlanoPage() {
     queryFn: turmasService.list,
   });
 
+  // Buscar plano existente se estiver editando
+  const { data: planoExistente, isLoading: loadingPlano } = useQuery({
+    queryKey: ['plano-aula', id],
+    queryFn: () => planosAulaService.getById(id!),
+    enabled: isEditing,
+  });
+
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    reset,
+    formState: { errors },
   } = useForm<PlanoForm>({
     resolver: zodResolver(planoSchema),
     defaultValues: {
@@ -44,16 +56,77 @@ export default function CriarPlanoPage() {
     },
   });
 
-  const onSubmit = async (data: PlanoForm) => {
-    try {
-      await planosAulaService.create(data);
+  // Mutation para criar plano
+  const createMutation = useMutation({
+    mutationFn: planosAulaService.create,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['planos-aula'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-planos-recentes'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-professor-stats'] });
       toast.success('Plano de aula criado com sucesso!');
       navigate('/planos-aula');
-    } catch (error: any) {
+    },
+    onError: (error: any) => {
       const message = error.response?.data?.message || 'Erro ao criar plano';
       toast.error(Array.isArray(message) ? message[0] : message);
+    },
+  });
+
+  // Mutation para atualizar plano
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: PlanoForm }) =>
+      planosAulaService.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['planos-aula'] });
+      queryClient.invalidateQueries({ queryKey: ['plano-aula', id] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-planos-recentes'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-professor-stats'] });
+      toast.success('Plano de aula atualizado com sucesso!');
+      navigate('/planos-aula');
+    },
+    onError: (error: any) => {
+      const message = error.response?.data?.message || 'Erro ao atualizar plano';
+      toast.error(Array.isArray(message) ? message[0] : message);
+    },
+  });
+
+  // Preencher formulário quando carregar plano existente
+  useEffect(() => {
+    if (planoExistente) {
+      reset({
+        turmaId: planoExistente.turmaId,
+        data: planoExistente.data.split('T')[0],
+        disciplina: planoExistente.disciplina,
+        tema: planoExistente.tema,
+        objetivo: planoExistente.objetivo,
+        recursos: planoExistente.recursos || '',
+        atividades: planoExistente.atividades || '',
+        avaliacaoPlaneada: planoExistente.avaliacaoPlaneada || '',
+        observacoes: planoExistente.observacoes || '',
+        status: planoExistente.status,
+      });
+    }
+  }, [planoExistente, reset]);
+
+  const onSubmit = (data: PlanoForm) => {
+    if (isEditing) {
+      updateMutation.mutate({ id: id!, data });
+    } else {
+      createMutation.mutate(data);
     }
   };
+
+  if (isEditing && loadingPlano) {
+    return (
+      <div className="space-y-6">
+        <div className="card animate-pulse">
+          <div className="h-8 bg-gray-200 rounded w-1/3 mb-4"></div>
+          <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
+          <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -64,7 +137,9 @@ export default function CriarPlanoPage() {
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
-        <h1 className="text-3xl font-bold text-gray-900">Novo Plano de Aula</h1>
+        <h1 className="text-3xl font-bold text-gray-900">
+          {isEditing ? 'Editar Plano de Aula' : 'Novo Plano de Aula'}
+        </h1>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -222,11 +297,15 @@ export default function CriarPlanoPage() {
           </button>
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={createMutation.isPending || updateMutation.isPending}
             className="btn btn-primary flex items-center"
           >
             <Save className="w-4 h-4 mr-2" />
-            {isSubmitting ? 'Salvando...' : 'Salvar Plano'}
+            {createMutation.isPending || updateMutation.isPending
+              ? 'Salvando...'
+              : isEditing
+              ? 'Atualizar Plano'
+              : 'Salvar Plano'}
           </button>
         </div>
       </form>

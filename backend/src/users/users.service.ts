@@ -62,4 +62,12 @@ export class UsersService {
       order: { nome: 'ASC' },
     });
   }
+
+  async findAlunos() {
+    return this.userRepository.find({
+      where: { role: 'ALUNO' as any },
+      select: ['id', 'nome', 'email'],
+      order: { nome: 'ASC' },
+    });
+  }
 }

@@ -13,6 +13,8 @@ import { ProjetosModule } from './projetos/projetos.module';
 import { AtasModule } from './atas/atas.module';
 import { ConselhosModule } from './conselhos/conselhos.module';
 import { UploadsModule } from './uploads/uploads.module';
+import { DashboardModule } from './dashboard/dashboard.module';
+import { PedagogicoModule } from './pedagogico/pedagogico.module';
 
 @Module({
   imports: [
@@ -35,6 +37,8 @@ import { UploadsModule } from './uploads/uploads.module';
     AtasModule,
     ConselhosModule,
     UploadsModule,
+    DashboardModule,
+    PedagogicoModule,
   ],
 })
 export class AppModule { }

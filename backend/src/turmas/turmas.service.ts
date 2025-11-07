@@ -56,6 +56,21 @@ export class TurmasService {
     });
   }
 
+  async findByProfessor(professorId: string) {
+    return this.turmaRepository.find({
+      where: { professorResponsavelId: professorId },
+      select: {
+        id: true,
+        nome: true,
+        ano: true,
+        serie: true,
+        professorResponsavelId: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+  }
+
   async findOne(id: string) {
     const turma = await this.turmaRepository.findOne({
       where: { id },

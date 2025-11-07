@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Request } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { TurmasService } from './turmas.service';
 import { CreateTurmaDto } from './dto/create-turma.dto';
@@ -30,6 +30,14 @@ export class TurmasController {
     return this.turmasService.findAll();
   }
 
+  @Get('minhas-turmas')
+  @Roles(Role.PROFESSOR)
+  @ApiOperation({ summary: 'Listar turmas do professor logado' })
+  @ApiResponse({ status: 200, description: 'Lista de turmas do professor' })
+  findMyTurmas(@Request() req) {
+    return this.turmasService.findByProfessor(req.user.userId);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Buscar turma por ID' })
   @ApiResponse({ status: 200, description: 'Turma encontrada' })
@@ -40,8 +48,27 @@ export class TurmasController {
 
   @Patch(':id')
   @Roles(Role.ADMIN, Role.SUPERVISOR)
-  @ApiOperation({ summary: 'Atualizar turma' })
-  @ApiResponse({ status: 200, description: 'Turma atualizada' })
+  @ApiOperation({ 
+    summary: 'Atualizar turma',
+    description: 'Atualiza os dados de uma turma existente. Todos os campos são opcionais.'
+  })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Turma atualizada com sucesso',
+    schema: {
+      example: {
+        id: '12332',
+        nome: '5º Ano B',
+        ano: 2025,
+        serie: '5º Ano',
+        professorResponsavelId: 'uuid-do-professor',
+        createdAt: '2025-11-06T10:00:00.000Z',
+        updatedAt: '2025-11-06T10:30:00.000Z'
+      }
+    }
+  })
+  @ApiResponse({ status: 404, description: 'Turma não encontrada' })
+  @ApiResponse({ status: 400, description: 'Dados inválidos' })
   update(@Param('id') id: string, @Body() updateTurmaDto: UpdateTurmaDto) {
     return this.turmasService.update(id, updateTurmaDto);
   }

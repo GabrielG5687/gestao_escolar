@@ -1,15 +1,43 @@
 import { Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { Plus, FileText, Calendar, User } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Plus, FileText, Calendar, User, Trash2 } from 'lucide-react';
 import { planosAulaService } from '@/services/planosAulaService';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import toast from 'react-hot-toast';
+import { useAuthStore } from '@/store/authStore';
 
 export default function PlanosAulaPage() {
+  const queryClient = useQueryClient();
+  const { user } = useAuthStore();
+
   const { data: planos = [], isLoading } = useQuery({
     queryKey: ['planos-aula'],
     queryFn: () => planosAulaService.list(),
   });
+
+  const deleteMutation = useMutation({
+    mutationFn: planosAulaService.delete,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['planos-aula'] });
+      toast.success('Plano de aula excluído com sucesso!');
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Erro ao excluir plano de aula');
+    },
+  });
+
+  const handleDelete = (id: string, tema: string, event: React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (window.confirm(`Tem certeza que deseja excluir o plano "${tema}"?`)) {
+      deleteMutation.mutate(id);
+    }
+  };
+
+  const canDelete = (plano: any) => {
+    return user?.role === 'ADMIN' || (user?.role === 'PROFESSOR' && plano.autorId === user?.id);
+  };
 
   return (
     <div className="space-y-6">
@@ -65,13 +93,22 @@ export default function PlanosAulaPage() {
                 </div>
               </div>
 
-              <div className="mt-4 pt-4 border-t border-gray-200">
+              <div className="mt-4 pt-4 border-t border-gray-200 flex items-center justify-between">
                 <Link
                   to={`/planos-aula/${plano.id}`}
                   className="text-sm text-primary-600 hover:text-primary-700 font-medium"
                 >
                   Ver detalhes →
                 </Link>
+                {canDelete(plano) && (
+                  <button
+                    onClick={(e) => handleDelete(plano.id, plano.tema, e)}
+                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    title="Excluir plano"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
               </div>
             </div>
           ))}

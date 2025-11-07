@@ -20,6 +20,12 @@ export const usersService = {
     return response.data;
   },
 
+  // Listar apenas alunos
+  listAlunos: async (): Promise<User[]> => {
+    const response = await api.get('/users/alunos');
+    return response.data;
+  },
+
   // Buscar usuário por ID
   getById: async (id: string): Promise<User> => {
     const response = await api.get(`/users/${id}`);
